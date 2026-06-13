@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasir POS - Modern Point of Sale System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <!-- Capacitor Core for Android native features -->
+    <script src="https://unpkg.com/@capacitor/core@latest/dist/capacitor.js"></script>
+    <script src="https://unpkg.com/@capacitor/app@latest/dist/plugin.js"></script>
+    <script src="https://unpkg.com/@capacitor/permissions@latest/dist/plugin.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="pinScreen" class="pin-lock-screen">
+        <div class="pin-card glass">
+            <div class="pin-header">
+                <i class="fas fa-shield-alt pin-icon"></i>
+                <h2>Sistem Terkunci</h2>
+                <p id="pinScreenSubtitle">Masukkan 4 Digit PIN Otorisasi Kasir</p>
+            </div>
+            <div class="pin-dots-container">
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+            </div>
+            <p id="pinErrorMessage" class="pin-error-text hidden">PIN salah! Silakan coba lagi.</p>
+                <div class="pin-numpad">
+                    <button class="numpad-btn" data-num="1">1</button>
+                    <button class="numpad-btn" data-num="2">2</button>
+                    <button class="numpad-btn" data-num="3">3</button>
+                    <button class="numpad-btn" data-num="4">4</button>
+                    <button class="numpad-btn" data-num="5">5</button>
+                    <button class="numpad-btn" data-num="6">6</button>
+                    <button class="numpad-btn" data-num="7">7</button>
+                    <button class="numpad-btn" data-num="8">8</button>
+                    <button class="numpad-btn" data-num="9">9</button>
+                    <button class="numpad-btn btn-clear" data-action="pin-clear"><i class="fas fa-backspace"></i></button>
+                    <button class="numpad-btn" data-num="0">0</button>
+                    <button class="numpad-btn btn-submit" data-action="pin-submit"><i class="fas fa-check-circle"></i></button>
+                </div>
+        </div>
+    </div>
+
+    <div id="mainAppWrapper" class="hidden">
+        
+        <header class="header">
+            <div class="header-container">
+                <div class="header-left">
+                    <div class="logo">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>KasirPOS</span>
+                    </div>
+                </div>
+                <div class="header-center">
+                    <h1>Sistem Kasir Modern</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn-secondary" id="manageProductsBtn" title="Kelola Produk">
+                        <i class="fas fa-boxes"></i>
+                    </button>
+                    <button class="btn-secondary" id="setPinBtn" title="Buat PIN Baru">
+                        <i class="fas fa-user-lock"></i>
+                    </button>
+                    <button class="btn-theme" id="themeToggle" title="Toggle Dark/Light Mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="btn-lock" id="manualLockBtn" title="Kunci Kasir">
+                        <i class="fas fa-lock"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <section class="catalog-section">
+                <div class="section-header">
+                    <h2>Katalog Produk</h2>
+                    <button class="btn-refresh" id="refreshBtn" title="Refresh Data">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+
+                <div class="search-filter">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Cari nama produk atau kode barcode..."
+                            autocomplete="off"
+                        >
+                        <button class="btn-camera-scan" id="openCameraScanBtn" title="Scan via Kamera HP">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <button class="btn-clear" id="clearSearch" title="Clear Search">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="category-filter">
+                        <button class="category-btn active" data-category="all">
+                            <i class="fas fa-list"></i> Semua
+                        </button>
+                        <button class="category-btn" data-category="makanan">
+                            <i class="fas fa-utensils"></i> Makanan
+                        </button>
+                        <button class="category-btn" data-category="minuman">
+                            <i class="fas fa-glass-water"></i> Minuman
+                        </button>
+                        <button class="category-btn" data-category="snack">
+                            <i class="fas fa-cookie"></i> Snack
+                        </button>
+                    </div>
+                </div>
+
+                <div class="products-grid" id="productsGrid">
+                    </div>
+            </section>
+
+            <section class="cart-section">
+                <div class="section-header">
+                    <h2>Keranjang Belanja</h2>
+                    <button class="btn-clear-cart" id="clearCartBtn" title="Kosongkan Keranjang">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+
+                <div class="cart-items" id="cartItems">
+                    </div>
+
+                <div class="cart-summary">
+                    <div class="summary-row">
+                        <label>Subtotal</label>
+                        <span id="subtotal">Rp 0</span>
+                    </div>
+
+                    <div class="discount-section">
+                        <div class="discount-header">
+                            <label>Diskon</label>
+                            <div class="discount-toggle">
+                                <button class="discount-type-btn active" id="typePercentBtn" data-type="percent">%</button>
+                                <button class="discount-type-btn" id="typeNominalBtn" data-type="nominal">Rp</button>
+                            </div>
+                        </div>
+                        <div class="discount-input-group">
+                            <input 
+                                type="number" 
+                                id="discountInput" 
+                                placeholder="0"
+                                min="0"
+                            >
+                            <span id="discountAmount">Rp 0</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-row">
+                        <label>Pajak (11%)</label>
+                        <span id="tax">Rp 0</span>
+                    </div>
+
+                    <div class="summary-row total">
+                        <label>Total Akhir</label>
+                        <span id="total">Rp 0</span>
+                    </div>
+
+                    <div class="payment-section">
+                        <label for="paymentInput">Uang Dibayarkan</label>
+                        <div class="payment-input-group">
+                            <span class="currency">Rp</span>
+                            <input 
+                                type="number" 
+                                id="paymentInput" 
+                                placeholder="0"
+                                min="0"
+                            >
+                        </div>
+                        <div class="payment-presets">
+                            <button type="button" class="payment-preset-btn" data-amount="20000">Rp 20.000</button>
+                            <button type="button" class="payment-preset-btn" data-amount="50000">Rp 50.000</button>
+                            <button type="button" class="payment-preset-btn" data-amount="100000">Rp 100.000</button>
+                            <button type="button" class="payment-preset-btn" data-amount="200000">Rp 200.000</button>
+                        </div>
+                        <div class="payment-methods">
+                            <span>Pembayaran</span>
+                            <button type="button" class="method-btn active" data-method="cash">Tunai</button>
+                            <button type="button" class="method-btn" data-method="scan">QR</button>
+                        </div>
+                        <div class="change-section">
+                            <label>Kembalian</label>
+                            <div class="change-display" id="changeDisplay">
+                                <span id="changeText">Rp 0</span>
+                                <span class="warning" id="changeWarning"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" id="printBtn">
+                            <i class="fas fa-print"></i> Cetak
+                        </button>
+                        <button class="btn btn-primary" id="checkoutBtn">
+                            <i class="fas fa-check-circle"></i> Bayar
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="analytics-section">
+                <div class="section-header">
+                    <h2>Analisis Ringan</h2>
+                    <div class="analytics-toggle">
+                        <button class="analytics-btn active" data-period="week">Mingguan</button>
+                        <button class="analytics-btn" data-period="month">Bulanan</button>
+                    </div>
+                </div>
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <span>Total Penjualan</span>
+                        <strong id="analyticsRevenue">Rp 0</strong>
+                    </div>
+                    <div class="analytics-card">
+                        <span>Transaksi</span>
+                        <strong id="analyticsCount">0</strong>
+                    </div>
+                    <div class="analytics-card">
+                        <span>Rata-rata Struk</span>
+                        <strong id="analyticsAverage">Rp 0</strong>
+                    </div>
+                    <div class="analytics-card">
+                        <span>Produk Terlaris</span>
+                        <strong id="analyticsBestSeller">-</strong>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal hidden" id="cameraScannerModal">
+        <div class="modal-content glass" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 id="cameraModalTitle"><i class="fas fa-qrcode"></i> Kamera Pemindai</h3>
+                <button class="btn-close" data-action="close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="camera-container">
+                    <div id="cameraLiveEngine" style="width: 100%; background: #000; border-radius: 8px; overflow: hidden;"></div>
+                    <!-- Watermark Overlay Kasir -->
+                    <div class="camera-watermark">
+                        <div class="watermark-content">
+                            <i class="fas fa-receipt"></i>
+                            <span class="watermark-text">KASIR POS</span>
+                            <span class="watermark-sub">Scan & Sell</span>
+                        </div>
+                    </div>
+                </div>
+                <p id="cameraModalHint" style="text-align: center; margin-top: 10px; font-size: 0.85rem; opacity: 0.8;">
+                    Dekatkan Barcode/QR Code produk ke dalam sorotan kamera.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal hidden" id="confirmModal">
+        <div class="modal-content glass" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3 id="modalTitle"></h3>
+                <button class="btn-close" data-action="close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="close">Batal</button>
+                <button class="btn btn-primary" id="modalConfirmBtn">Bayar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal hidden" id="productManagerModal">
+        <div class="modal-content glass" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-box-open"></i> Kelola Produk</h3>
+                <button class="btn-close" data-action="close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <div class="form-row">
+                        <label>Nama Produk</label>
+                        <input type="text" id="productName" placeholder="Nama produk" required>
+                    </div>
+                    <div class="form-row">
+                        <label>Kategori</label>
+                        <select id="productCategory" required>
+                            <option value="makanan">Makanan</option>
+                            <option value="minuman">Minuman</option>
+                            <option value="snack">Snack</option>
+                            <option value="elektronik">Elektronik</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>Harga</label>
+                        <input type="number" id="productPrice" placeholder="10000" min="0" required>
+                    </div>
+                    <div class="form-row">
+                        <label>Stok</label>
+                        <input type="number" id="productStock" placeholder="10" min="0" required>
+                    </div>
+                    <div class="form-row">
+                        <label>Upload Gambar</label>
+                        <input type="file" id="productImage" accept="image/*">
+                    </div>
+                    <div class="form-row" style="justify-content:flex-end; gap:0.5rem;">
+                        <button type="submit" class="btn btn-primary">Simpan Produk</button>
+                    </div>
+                </form>
+                <div class="product-manager-list" id="productManagerList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal hidden" id="setPinModal">
+        <div class="modal-content glass" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-lock"></i> Atur PIN Kasir</h3>
+                <button class="btn-close" data-action="close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="setPinForm">
+                    <div class="form-row">
+                        <label>PIN Baru (4 digit)</label>
+                        <input type="password" id="newPinInput" maxlength="4" placeholder="1234" required>
+                    </div>
+                    <div class="form-row">
+                        <label>Konfirmasi PIN</label>
+                        <input type="password" id="confirmPinInput" maxlength="4" placeholder="1234" required>
+                    </div>
+                    <div class="form-row" style="justify-content:flex-end; gap:0.5rem;">
+                        <button type="submit" class="btn btn-primary">Simpan PIN</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="print-section" id="printSection">
+        <!-- Print Watermark Background -->
+        <div class="print-watermark">
+            <div class="print-watermark-content">
+                <i class="fas fa-receipt"></i>
+                <span>KASIR POS</span>
+            </div>
+        </div>
+        
+        <div class="receipt">
+            <div class="receipt-header">
+                <h3>KASIR POS</h3>
+                <p>Toko Retail Modern</p>
+            </div>
+            <div class="receipt-meta">
+                <div class="receipt-meta-row"><span>No. Struk</span><span id="receiptNumber">-</span></div>
+                <div class="receipt-meta-row"><span>Tanggal</span><span id="receiptDate">-</span></div>
+                <div class="receipt-meta-row"><span>Waktu</span><span id="receiptTime">-</span></div>
+                <div class="receipt-meta-row"><span>Kasir</span><span id="receiptCashier">Admin</span></div>
+            </div>
+            <div class="receipt-divider"></div>
+            <table class="receipt-items">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Harga</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="receiptItemsBody"></tbody>
+            </table>
+            <div class="receipt-divider"></div>
+                <div class="receipt-summary">
+                <div class="receipt-row"><span>Subtotal</span><span id="receiptSubtotal">Rp 0</span></div>
+                <div class="receipt-row" id="receiptDiscountRow"><span>Diskon</span><span id="receiptDiscount">Rp 0</span></div>
+                <div class="receipt-row"><span>Pajak (11%)</span><span id="receiptTax">Rp 0</span></div>
+                <div class="receipt-row total"><span>Total</span><span id="receiptTotal">Rp 0</span></div>
+                <div class="receipt-row"><span>Dibayar</span><span id="receiptPayment">Rp 0</span></div>
+                <div class="receipt-row"><span>Kembalian</span><span id="receiptChange">Rp 0</span></div>
+            </div>
+            <div class="receipt-divider"></div>
+            <div class="receipt-footer">
+                <p>Terima kasih atas kunjungan Anda!</p>
+                <p id="receiptPrintedAt"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js" defer></script>
+</body>
+</html>

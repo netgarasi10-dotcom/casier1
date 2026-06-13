@@ -1,0 +1,164 @@
+/* --- VARIABLES & SETUP --- */
+:root {
+    --bg-color: #eef9f4;
+    --text-color: #224a3b;
+    --glass-bg: rgba(250, 255, 250, 0.85);
+    --glass-border: rgba(150, 207, 187, 0.65);
+    --primary-color: #3fb78b;
+    --primary-hover: #41c293;
+    --danger-color: #e17f7f;
+    --danger-hover: #d76f6f;
+    --border-color: #c9e3d7;
+    --card-shadow: 0 8px 32px 0 rgba(64, 122, 101, 0.12);
+}
+
+body.dark-mode {
+    --bg-color: #112b25;
+    --text-color: #dce9e2;
+    --glass-bg: rgba(20, 46, 39, 0.78);
+    --glass-border: rgba(168, 220, 191, 0.18);
+    --border-color: #274a41;
+    --card-shadow: 0 8px 32px 0 rgba(17, 74, 61, 0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.3s, color 0.3s; }
+html, body { min-height: 100%; }
+body { background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; overflow-x: hidden; overflow-y: auto; }
+
+/* --- UTILITIES --- */
+.hidden { display: none !important; }
+.text-primary { color: var(--primary-color); }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.w-100 { width: 100%; }
+.mt-2 { margin-top: 1rem; }
+
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--card-shadow);
+}
+
+/* --- BUTTONS --- */
+button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 15px; font-weight: bold; color: white; transition: 0.2s; }
+.btn-primary { background: var(--primary-color); }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-danger { background: var(--danger-color); padding: 5px 10px;}
+.btn-danger:hover { background: var(--danger-hover); }
+.btn-success { background: #28a745; }
+.btn-checkout { background: var(--primary-color); width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px; }
+
+/* --- INPUTS --- */
+input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: transparent; color: var(--text-color); outline: none; }
+input:focus { border-color: var(--primary-color); }
+
+/* --- PIN SCREEN --- */
+#pin-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; justify-content: center; align-items: center; background: var(--bg-color); }
+.pin-box { padding: 40px; border-radius: 20px; text-align: center; width: 320px; }
+.pin-display { display: flex; justify-content: center; gap: 15px; margin: 20px 0; }
+.dot { width: 15px; height: 15px; border-radius: 50%; background: var(--border-color); }
+.dot.active { background: var(--primary-color); }
+.numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.num-btn { background: rgba(0,0,0,0.05); color: var(--text-color); font-size: 1.5rem; padding: 15px; border-radius: 10px; }
+.dark-mode .num-btn { background: rgba(255,255,255,0.1); }
+.enter-btn { background: var(--primary-color); color: white; }
+
+/* --- MAIN LAYOUT --- */
+#app-container { display: grid; grid-template-columns: 80px 1fr 350px; height: 100vh; }
+
+/* Sidebar Nav */
+.sidebar { display: flex; flex-direction: column; align-items: center; padding: 20px 0; z-index: 10; }
+.logo h2 { font-size: 1rem; margin-bottom: 30px; text-align: center; }
+.nav-links { list-style: none; width: 100%; }
+.nav-links li { padding: 15px 0; text-align: center; cursor: pointer; color: #888; font-size: 0.8rem; }
+.nav-links li i { display: block; font-size: 1.5rem; margin-bottom: 5px; }
+.nav-links li:hover, .nav-links li.active { color: var(--primary-color); border-right: 3px solid var(--primary-color); background: rgba(0,0,0,0.05); }
+.bottom-nav { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.bottom-nav button { background: transparent; color: var(--text-color); font-size: 1.2rem; }
+
+/* Main Content */
+.main-content { padding: 20px; overflow-y: auto; }
+.top-bar { padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 20px;}
+.search-bar { display: flex; align-items: center; background: rgba(0,0,0,0.05); border-radius: 8px; padding: 0 15px; flex: 1; }
+.dark-mode .search-bar { background: rgba(255,255,255,0.05); }
+.search-bar input { border: none; margin: 0; padding: 12px; }
+
+/* Product Grid */
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+.product-card { padding: 15px; border-radius: 12px; text-align: center; cursor: pointer; transition: transform 0.2s; }
+.product-card:hover { transform: translateY(-5px); border-color: var(--primary-color); }
+.product-card h4 { margin-bottom: 5px; }
+.product-card .price { color: var(--primary-color); font-weight: bold; }
+.product-card .stock { font-size: 0.8rem; color: #888; }
+.low-stock { color: var(--danger-color) !important; font-weight: bold;}
+
+/* Cart Sidebar */
+.cart-sidebar { display: flex; flex-direction: column; padding: 20px; border-left: 1px solid var(--border-color); z-index: 10; }
+.cart-items { flex: 1; overflow-y: auto; margin: 20px 0; }
+.cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
+.cart-item-info h4 { font-size: 0.9rem; }
+.cart-qty { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+.cart-qty button { background: rgba(0,0,0,0.1); color: var(--text-color); padding: 2px 8px; border-radius: 4px; }
+.summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; }
+.total-row { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); border-top: 1px solid var(--border-color); padding-top: 10px; }
+.change-row { font-size: 1.1rem; font-weight: bold; }
+.error-text { color: var(--danger-color); }
+
+/* Tables (Inventory & History) */
+.table-container { border-radius: 12px; padding: 20px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: 12px; border-bottom: 1px solid var(--border-color); }
+th { color: var(--primary-color); }
+
+/* Modals */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+.modal-content { padding: 30px; border-radius: 15px; width: 400px; max-width: 90%; position: relative; }
+.close-btn { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; }
+
+/* Toast */
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-color); color: white; padding: 15px 25px; border-radius: 8px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); animation: slideIn 0.3s forwards; }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+    #app-container { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; }
+    .sidebar { flex-direction: row; justify-content: space-around; padding: 10px; }
+    .nav-links { display: flex; justify-content: center; gap: 20px; }
+    .nav-links li { border-right: none; border-bottom: 3px solid transparent; }
+    .nav-links li.active { border-bottom: 3px solid var(--primary-color); }
+    .logo, .bottom-nav { display: none; }
+    .cart-sidebar { border-left: none; border-top: 1px solid var(--border-color); height: 50vh; }
+}
+
+/* --- PRINT STYLESHEET (THERMAL PRINTER) --- */
+@media print {
+    /* 1. Atur ukuran kertas fisik di sini */
+    @page {
+        size: 100mm 210mm; /* Lebar 10cm, Tinggi 21cm */
+        margin: 0;         /* Menghilangkan margin bawaan browser agar mentok ke tepi */
+    }
+
+    body * { visibility: hidden; }
+    #print-receipt, #print-receipt * { visibility: visible; }
+    
+    /* 2. Ubah width dari 58mm menjadi 100mm */
+    #print-receipt { 
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        width: 100mm;      /* Diubah agar pas dengan lebar kertas 10cm */
+        height: 210mm;     /* (Opsional) Jika ingin isi struk dipaksa fix setinggi 21cm */
+        color: black; 
+        background: white; 
+        font-family: monospace; 
+        font-size: 12px; 
+        padding: 5mm;      /* Disarankan beri sedikit padding agar tulisan tidak terlalu mentok kertas */
+        box-sizing: border-box; /* Memastikan padding tidak merusak ukuran width 100mm */
+    }
+    
+    .receipt-header { text-align: center; margin-bottom: 10px; }
+    .receipt-items { width: 100%; margin-bottom: 10px; }
+    .receipt-items td { padding: 2px 0; border: none; }
+    .receipt-footer { font-weight: bold; }
+}
