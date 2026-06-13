@@ -9,7 +9,7 @@ workflows:
     triggering:
       events:
         - push
-      branches:
+      watched_branches:
         - main
     scripts:
       - name: Install dependencies
@@ -17,7 +17,6 @@ workflows:
           npm install
       - name: Build Web Assets (jika menggunakan bundler seperti Vite/Webpack)
         script: |
-          # Buka tanda pagar di bawah jika Anda menggunakan build step (misal: npm run build)
           # npm run build 
       - name: Sync Capacitor to Android
         script: |
@@ -33,4 +32,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - email_anda@domain.com # Ganti dengan email Anda
+          - netgarasi10@gmail.com # Ganti dengan email Anda
