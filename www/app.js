@@ -19,7 +19,10 @@ class PosApp {
         this.html5QrCode = null;
         this._scannerRunning = false;
         this._scannerMode = 'product';
+        this.cameraFacingMode = 'environment';
         this.pinInput = '';
+        this.currentEditingProductId = null;
+        this.productFormImageData = null;
 
         // Initialize app
         this.init();
@@ -206,6 +209,54 @@ class PosApp {
         const openCameraBtn = document.getElementById('openCameraScanBtn');
         if (openCameraBtn) openCameraBtn.addEventListener('click', () => this.toggleCameraModal(true, 'product'));
 
+        const cameraSwitchBtn = document.getElementById('cameraSwitchBtn');
+        if (cameraSwitchBtn) cameraSwitchBtn.addEventListener('click', () => this.toggleCameraFacingDirection());
+
+        // Product manager modal
+        const manageProductsBtn = document.getElementById('manageProductsBtn');
+        if (manageProductsBtn) manageProductsBtn.addEventListener('click', () => this.openProductManager());
+
+        const productForm = document.getElementById('productForm');
+        if (productForm) {
+            productForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.saveProductForm();
+            });
+        }
+
+        const productImageInput = document.getElementById('productImage');
+        if (productImageInput) {
+            productImageInput.addEventListener('change', (e) => this.handleProductImageUpload(e));
+        }
+
+        const productManagerList = document.getElementById('productManagerList');
+        if (productManagerList) {
+            productManagerList.addEventListener('click', (e) => {
+                const editBtn = e.target.closest('.manager-edit-btn');
+                const deleteBtn = e.target.closest('.manager-delete-btn');
+                if (editBtn) {
+                    const id = parseInt(editBtn.dataset.id, 10);
+                    if (!Number.isNaN(id)) this.startEditProduct(id);
+                }
+                if (deleteBtn) {
+                    const id = parseInt(deleteBtn.dataset.id, 10);
+                    if (!Number.isNaN(id)) this.confirmProductDelete(id);
+                }
+            });
+        }
+
+        // Open set PIN modal
+        const setPinBtn = document.getElementById('setPinBtn');
+        if (setPinBtn) setPinBtn.addEventListener('click', () => this.openSetPinModal());
+
+        const setPinForm = document.getElementById('setPinForm');
+        if (setPinForm) {
+            setPinForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                this.handlePinChange();
+            });
+        }
+
         // PIN numpad delegation
         const pinPad = document.querySelector('.pin-numpad');
         if (pinPad) {
@@ -309,22 +360,25 @@ class PosApp {
         // Modal close (safe: close confirmModal or camera modal if present)
         document.querySelectorAll('[data-action="close"]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const confirm = document.getElementById('confirmModal');
-                if (confirm) confirm.classList.add('hidden');
-                const camera = document.getElementById('cameraScannerModal');
-                if (camera) camera.classList.add('hidden');
+                const modal = btn.closest('.modal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                    if (modal.id === 'productManagerModal') this.resetProductManagerForm();
+                    if (modal.id === 'setPinModal') this.resetSetPinForm();
+                }
             });
         });
 
-        // Close modal on backdrop click if confirmModal exists
-        const confirmModal = document.getElementById('confirmModal');
-        if (confirmModal) {
-            confirmModal.addEventListener('click', (e) => {
-                if (e.target.id === 'confirmModal') {
-                    confirmModal.classList.add('hidden');
+        // Close modal on backdrop click for all modals
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                    if (modal.id === 'productManagerModal') this.resetProductManagerForm();
+                    if (modal.id === 'setPinModal') this.resetSetPinForm();
                 }
             });
-        }
+        });
     }
 
     // ============ THEME MANAGEMENT ============
@@ -350,6 +404,250 @@ class PosApp {
             body.classList.remove('dark-mode');
             if (icon) icon.classList.add('fa-moon');
         }
+    }
+
+    // ============ PRODUCT MANAGEMENT ============
+    openProductManager() {
+        const modal = document.getElementById('productManagerModal');
+        if (!modal) return;
+
+        modal.classList.remove('hidden');
+        this.resetProductManagerForm();
+        this.renderProductManagerList();
+    }
+
+    resetProductManagerForm() {
+        const form = document.getElementById('productForm');
+        if (!form) return;
+
+        form.reset();
+        this.currentEditingProductId = null;
+        this.productFormImageData = null;
+
+        const header = document.querySelector('#productManagerModal .modal-header h3');
+        if (header) header.textContent = 'Kelola Produk';
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Simpan Produk';
+    }
+
+    async readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async handleProductImageUpload(event) {
+        const input = event.target;
+        if (!input || !input.files || input.files.length === 0) {
+            this.productFormImageData = null;
+            return;
+        }
+
+        try {
+            this.productFormImageData = await this.readFileAsDataURL(input.files[0]);
+        } catch (err) {
+            console.error('Gagal membaca gambar produk', err);
+            this.showToast('Gagal memuat gambar produk', 'error');
+            this.productFormImageData = null;
+        }
+    }
+
+    renderProductManagerList() {
+        const list = document.getElementById('productManagerList');
+        if (!list) return;
+
+        if (this.products.length === 0) {
+            list.innerHTML = '<p class="empty-manager">Belum ada produk yang ditambahkan.</p>';
+            return;
+        }
+
+        list.innerHTML = this.products.map(product => {
+            const preview = product.imageBase64
+                ? `<img src="${product.imageBase64}" alt="${product.name}">`
+                : `<span class="manager-icon">${product.icon || this.getCategoryIcon(product.category)}</span>`;
+
+            return `
+                <div class="product-manager-item">
+                    <div class="manager-image">${preview}</div>
+                    <div class="manager-details">
+                        <strong>${product.name}</strong>
+                        <span>${this.getCategoryLabel(product.category)}</span>
+                        <span>${this.formatCurrency(product.price)} | Stok ${product.stock}</span>
+                    </div>
+                    <div class="manager-actions">
+                        <button type="button" class="btn-secondary manager-edit-btn" data-id="${product.id}">
+                            <i class="fas fa-edit"></i> Ubah
+                        </button>
+                        <button type="button" class="btn-danger manager-delete-btn" data-id="${product.id}">
+                            <i class="fas fa-trash"></i> Hapus
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    startEditProduct(productId) {
+        const product = this.products.find(p => p.id === productId);
+        if (!product) return;
+
+        this.currentEditingProductId = productId;
+        this.productFormImageData = product.imageBase64 || null;
+
+        document.getElementById('productName').value = product.name;
+        document.getElementById('productCategory').value = product.category;
+        document.getElementById('productPrice').value = product.price;
+        document.getElementById('productStock').value = product.stock;
+        document.getElementById('productImage').value = '';
+
+        const header = document.querySelector('#productManagerModal .modal-header h3');
+        if (header) header.textContent = 'Ubah Produk';
+
+        const submitBtn = document.querySelector('#productForm button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Perbarui Produk';
+    }
+
+    confirmProductDelete(productId) {
+        this.showConfirmModal(
+            'Hapus Produk',
+            'Apakah Anda yakin ingin menghapus produk ini dari daftar?',
+            () => this.deleteProduct(productId)
+        );
+    }
+
+    deleteProduct(productId) {
+        this.products = this.products.filter(p => p.id !== productId);
+        this.cart = this.cart.filter(item => item.id !== productId);
+        this.saveToStorage();
+        this.renderProducts();
+        this.updateCart();
+        this.renderProductManagerList();
+        this.showToast('Produk berhasil dihapus', 'info');
+    }
+
+    async saveProductForm() {
+        const name = (document.getElementById('productName').value || '').trim();
+        const category = document.getElementById('productCategory').value;
+        const price = parseInt(document.getElementById('productPrice').value, 10) || 0;
+        const stock = parseInt(document.getElementById('productStock').value, 10) || 0;
+
+        if (!name || price < 0 || stock < 0) {
+            this.showToast('Lengkapi nama, harga, dan stok produk dengan benar', 'warning');
+            return;
+        }
+
+        if (this.currentEditingProductId) {
+            const existing = this.products.find(p => p.id === this.currentEditingProductId);
+            if (!existing) return;
+
+            existing.name = name;
+            existing.category = category;
+            existing.price = price;
+            existing.stock = stock;
+            if (this.productFormImageData) {
+                existing.imageBase64 = this.productFormImageData;
+            }
+            existing.icon = existing.icon || this.getCategoryIcon(category);
+            this.showToast('Produk diperbarui', 'success');
+        } else {
+            this.products.push({
+                id: Date.now(),
+                name,
+                category,
+                price,
+                stock,
+                icon: this.getCategoryIcon(category),
+                imageBase64: this.productFormImageData || null
+            });
+            this.showToast('Produk baru ditambahkan', 'success');
+        }
+
+        this.saveToStorage();
+        this.renderProducts();
+        this.renderProductManagerList();
+        this.resetProductManagerForm();
+    }
+
+    getCategoryIcon(category) {
+        const icons = {
+            makanan: '🍽️',
+            minuman: '🥤',
+            snack: '🍪',
+            elektronik: '🔌'
+        };
+        return icons[category] || '📦';
+    }
+
+    openSetPinModal() {
+        const modal = document.getElementById('setPinModal');
+        if (!modal) return;
+
+        modal.classList.remove('hidden');
+        this.resetSetPinForm();
+    }
+
+    resetSetPinForm() {
+        const inputIds = ['oldPinInput', 'newPinInput', 'confirmPinInput'];
+        inputIds.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = '';
+        });
+        const error = document.getElementById('setPinErrorMessage');
+        if (error) {
+            error.textContent = '';
+            error.classList.add('hidden');
+        }
+    }
+
+    handlePinChange() {
+        const oldPin = document.getElementById('oldPinInput').value.trim();
+        const newPin = document.getElementById('newPinInput').value.trim();
+        const confirmPin = document.getElementById('confirmPinInput').value.trim();
+        const currentPin = this.settings.pinCode || '1234';
+        const error = document.getElementById('setPinErrorMessage');
+
+        if (!oldPin || oldPin.length !== 4) {
+            if (error) {
+                error.textContent = 'Masukkan PIN lama 4 digit.';
+                error.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (oldPin !== currentPin) {
+            if (error) {
+                error.textContent = 'PIN lama tidak sesuai.';
+                error.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (!newPin || newPin.length !== 4) {
+            if (error) {
+                error.textContent = 'Masukkan PIN baru 4 digit.';
+                error.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (newPin !== confirmPin) {
+            if (error) {
+                error.textContent = 'Konfirmasi PIN tidak cocok.';
+                error.classList.remove('hidden');
+            }
+            return;
+        }
+
+        this.settings.pinCode = newPin;
+        this.saveToStorage();
+        this.showToast('PIN berhasil diperbarui', 'success');
+
+        const modal = document.getElementById('setPinModal');
+        if (modal) modal.classList.add('hidden');
     }
 
         // ============ PIN + LOCK SCREEN ============
@@ -428,6 +726,8 @@ class PosApp {
                     ? 'Arahkan QR pembayaran ke kamera untuk mengisi jumlah uang.'
                     : 'Dekatkan Barcode/QR Code produk ke dalam sorotan kamera.';
             }
+
+            this.updateCameraSwitchButton();
         }
 
         async requestCameraPermission() {
@@ -534,7 +834,8 @@ class PosApp {
                     return;
                 }
 
-                const cameraId = cameras[0].id;
+                const camera = this.selectCameraByFacing(cameras, this.cameraFacingMode);
+                const cameraId = camera ? camera.id : cameras[0].id;
                 const config = { fps: 10, qrbox: 250 };
 
                 this.html5QrCode.start(
@@ -559,13 +860,44 @@ class PosApp {
         }
 
         stopScanner() {
-            if (!this.html5QrCode) return;
-            this.html5QrCode.stop().then(() => {
+            if (!this.html5QrCode) return Promise.resolve();
+            return this.html5QrCode.stop().then(() => {
                 try { this.html5QrCode.clear(); } catch (e) {}
                 this._scannerRunning = false;
             }).catch(err => {
                 this._scannerRunning = false;
             });
+        }
+
+        async toggleCameraFacingDirection() {
+            this.cameraFacingMode = this.cameraFacingMode === 'environment' ? 'user' : 'environment';
+            this.updateCameraSwitchButton();
+            this.showToast(`Menggunakan kamera ${this.cameraFacingMode === 'user' ? 'depan' : 'belakang'}`, 'info');
+
+            if (this._scannerRunning) {
+                await this.stopScanner();
+                await this.startScanner();
+            }
+        }
+
+        updateCameraSwitchButton() {
+            const btn = document.getElementById('cameraSwitchBtn');
+            if (!btn) return;
+            btn.innerHTML = `${this.cameraFacingMode === 'user' ? '<i class="fas fa-camera"></i> Depan' : '<i class="fas fa-camera-retro"></i> Belakang'}`;
+        }
+
+        selectCameraByFacing(cameras, facing) {
+            if (!cameras || cameras.length === 0) return null;
+
+            const lower = facing.toLowerCase();
+            const frontMatch = cameras.find(c => /front|user|selfie/i.test(c.label));
+            const rearMatch = cameras.find(c => /back|rear|environment|wide/i.test(c.label));
+
+            if (lower === 'user') {
+                return frontMatch || cameras[0];
+            }
+
+            return rearMatch || cameras[0];
         }
 
         handleScanSuccess(decodedText) {
@@ -653,10 +985,13 @@ class PosApp {
         grid.innerHTML = products.map(product => {
             const stockStatus = product.stock === 0 ? 'out' : product.stock < 5 ? 'low' : '';
             const stockLabel = product.stock === 0 ? 'Habis' : product.stock < 5 ? `Sisa ${product.stock}` : `Stok ${product.stock}`;
+            const imageMarkup = product.imageBase64
+                ? `<img src="${product.imageBase64}" alt="${product.name}">`
+                : product.icon;
 
             return `
                 <div class="product-card">
-                    <div class="product-image">${product.icon}</div>
+                    <div class="product-image">${imageMarkup}</div>
                     <div class="product-name">${product.name}</div>
                     <span class="product-category">${this.getCategoryLabel(product.category)}</span>
                     <div class="product-info">

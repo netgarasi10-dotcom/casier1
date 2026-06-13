@@ -245,6 +245,9 @@
         <div class="modal-content glass" style="max-width: 450px;">
             <div class="modal-header">
                 <h3 id="cameraModalTitle"><i class="fas fa-qrcode"></i> Kamera Pemindai</h3>
+                <button id="cameraSwitchBtn" type="button" class="btn-secondary btn-small" title="Ganti Kamera">
+                    <i class="fas fa-exchange-alt"></i>
+                </button>
                 <button class="btn-close" data-action="close">
                     <i class="fas fa-times"></i>
                 </button>
@@ -341,6 +344,10 @@
             <div class="modal-body">
                 <form id="setPinForm">
                     <div class="form-row">
+                        <label>PIN Lama (4 digit)</label>
+                        <input type="password" id="oldPinInput" maxlength="4" placeholder="1234" required>
+                    </div>
+                    <div class="form-row">
                         <label>PIN Baru (4 digit)</label>
                         <input type="password" id="newPinInput" maxlength="4" placeholder="1234" required>
                     </div>
@@ -348,6 +355,7 @@
                         <label>Konfirmasi PIN</label>
                         <input type="password" id="confirmPinInput" maxlength="4" placeholder="1234" required>
                     </div>
+                    <div id="setPinErrorMessage" class="hidden"></div>
                     <div class="form-row" style="justify-content:flex-end; gap:0.5rem;">
                         <button type="submit" class="btn btn-primary">Simpan PIN</button>
                     </div>
