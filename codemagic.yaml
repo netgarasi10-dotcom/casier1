@@ -1,35 +1,28 @@
 workflows:
-  html-capacitor-android:
-    name: HTML/JS/CSS Android via Capacitor
-    max_build_duration: 60
-    instance_type: mac_mini_m1
+  html-android-workflow:
+    name: HTML CSS JS Android Build
     environment:
-      node: latest
-      java: 21 # <--- DIUBAH KE VERSI 21
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
+      # 1. PANGGIL KUNCI ANDROID ANDA DI SINI
+      android_signing:
+        - kunci-android  # <--- Harus sama persis dengan nama keystore yang Anda upload
+    
     scripts:
-      - name: Install dependencies
+      - name: Install & Sync Android (Capacitor/Cordova)
         script: |
           npm install
-      - name: Build Web Assets (jika menggunakan bundler seperti Vite/Webpack)
+          # Jalankan perintah sync framework Anda, contoh jika pakai Capacitor:
+          # npx cap sync android 
+
+      - name: Build and Sign Android APK
         script: |
-          # npm run build 
-      - name: Sync Capacitor to Android
-        script: |
-          npx cap sync android
-      - name: Set up chmod for Gradle
-        script: |
-          cd android && chmod +x gradlew
-      - name: Build Android APK
-        script: |
-          cd android && ./gradlew assembleRelease
+          cd android # sesuaikan dengan folder project android Anda
+          
+          # 2. JALANKAN GRADLE DENGAN VARIABEL BAWAAN CODEMAGIC
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
+            
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
-    publishing:
-      email:
-        recipients:
-          - netgarasi10@gmail.com # Ganti dengan email Anda
