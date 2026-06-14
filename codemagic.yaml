@@ -1,9 +1,11 @@
 workflows:
   my-android-workflow:
     name: Android Build Workflow
-    # Add this environment section to force Java 21
     environment:
       java: 21
+      # Tell Codemagic to fetch your uploaded keystore configuration
+      android_signing:
+        - kunci-android
     scripts:
       - name: Install & Sync Android
         script: |
@@ -16,7 +18,7 @@ workflows:
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH \
-            -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD \
-            -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
+            -Pandroid.injected.signing.store.file="$CM_KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$CM_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$CM_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$CM_KEY_PASSWORD"
