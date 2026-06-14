@@ -6,14 +6,19 @@ workflows:
       android_signing:
         - kunci-android
     
-    # TAMBAHKAN BAGIAN INI AGAR LINK DOWNLOAD MUNCUL
+    # Membaca file APK yang sudah diubah namanya menjadi casier.apk
     artifacts:
-      - android/app/build/outputs/apk/**/*.apk
+      - android/app/build/outputs/apk/release/*.apk
 
     scripts:
       - name: Install & Sync Android
         script: |
           npm install
+          
+          # Jika Anda menginstall @capacitor/assets di lokal dan menyertakannya di package.json,
+          # jalankan baris di bawah ini agar Codemagic memastikan aset ter-generate ulang dengan aman:
+          # npx capacitor-assets generate --android
+          
           npm run build
           npx cap sync android
 
@@ -26,3 +31,6 @@ workflows:
             -Pandroid.injected.signing.store.password="$CM_KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$CM_KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$CM_KEY_PASSWORD"
+          
+          # Mengubah nama file output default menjadi casier.apk sebelum di-upload ke artifact
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/casier.apk
