@@ -3,9 +3,13 @@ workflows:
     name: Android Build Workflow
     environment:
       java: 21
-      # Tell Codemagic to fetch your uploaded keystore configuration
       android_signing:
         - kunci-android
+    
+    # TAMBAHKAN BAGIAN INI AGAR LINK DOWNLOAD MUNCUL
+    artifacts:
+      - android/app/build/outputs/apk/**/*.apk
+
     scripts:
       - name: Install & Sync Android
         script: |
