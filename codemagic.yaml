@@ -1,28 +1,17 @@
 workflows:
-  html-android-workflow:
-    name: HTML CSS JS Android Build
-    environment:
-      # 1. PANGGIL KUNCI ANDROID ANDA DI SINI
-      android_signing:
-        - kunci-android  # <--- Harus sama persis dengan nama keystore yang Anda upload
-    
+  my-android-workflow: # You can name this whatever you like
+    name: Android Build Workflow
     scripts:
-      - name: Install & Sync Android (Capacitor/Cordova)
+      - name: Install & Sync Android
         script: |
           npm install
-          # Jalankan perintah sync framework Anda, contoh jika pakai Capacitor:
-          # npx cap sync android 
 
       - name: Build and Sign Android APK
         script: |
-          cd android # sesuaikan dengan folder project android Anda
-          
-          # 2. JALANKAN GRADLE DENGAN VARIABEL BAWAAN CODEMAGIC
+          cd android
+          chmod +x gradlew
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH \
             -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD \
             -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
-            
-    artifacts:
-      - android/app/build/outputs/apk/release/*.apk
