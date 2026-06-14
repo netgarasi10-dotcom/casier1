@@ -1,10 +1,14 @@
 workflows:
-  my-android-workflow: # You can name this whatever you like
+  my-android-workflow:
     name: Android Build Workflow
     scripts:
       - name: Install & Sync Android
         script: |
           npm install
+          # Generate the production web assets (adjust if you use 'npm run generate', etc.)
+          npm run build 
+          # Sync the assets and plugins into the native Android folder
+          npx cap sync android 
 
       - name: Build and Sign Android APK
         script: |
